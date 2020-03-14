@@ -110,5 +110,5 @@ pub fn html(input: TokenStream) -> TokenStream {
 #[proc_macro_hack]
 pub fn css(input: TokenStream) -> TokenStream {
     let root = parse_macro_input!(input as StyleSheet);
-    TokenStream::from(quote! {#root})
+    TokenStream::from(root.into_token_stream())
 }

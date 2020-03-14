@@ -34,7 +34,7 @@ impl Parse for Class {
 impl ToTokens for Class {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         let Class(_, name) = self;
-        let name = format!(".{}", name.to_string());
-        tokens.extend(quote! { #name });
+        let name = format!(".{}", name);
+        tokens.extend(quote! { #name.to_string() });
     }
 }

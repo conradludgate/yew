@@ -4,7 +4,7 @@ pub mod values;
 
 use hyphenate::to_hyphen_case;
 use quote::{quote, ToTokens};
-use selector::MultiSelector;
+use selector::Selectors;
 use std::collections::HashSet;
 use syn::braced;
 use syn::parse::{Parse, ParseStream, Result};
@@ -33,26 +33,25 @@ impl Parse for StyleSheet {
 
 impl ToTokens for StyleSheet {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let variables: Vec<syn::Ident> = self.variables.clone().into_iter().collect();
-        let names = variables.clone();
-        let values = variables.clone();
-        let values = values
-            .iter()
-            .zip(0..)
-            .map(|(v, i)| format!("{}-{}", to_hyphen_case(&v.to_string()), i));
+        let vars = self.variables.iter().zip(0..).map(|(v, i)| {
+            let value = format!("{}-{}", to_hyphen_case(&v.to_string()), i);
+            quote! {
+                #v = #value;
+            }
+        });
 
-        let nodes = self.blocks.iter().map(|s| s.into_token_stream());
+        let nodes = self.blocks.iter();
 
-        tokens.extend(quote! (
+        tokens.extend(quote! {
             #(
-                #names = #values;
+                #vars
             )*
             vec![
                 #(
                     #nodes
                 ),*
             ].join("\n")
-        ));
+        });
     }
 }
 
@@ -61,13 +60,13 @@ pub trait ParseVariable: Sized {
 }
 
 pub struct StyleBlock {
-    selector: MultiSelector,
+    selector: Selectors,
     contents: StyleValues,
 }
 
 impl ParseVariable for StyleBlock {
     fn parse(input: ParseStream, vars: &mut HashSet<syn::Ident>) -> Result<Self> {
-        let selector = MultiSelector::parse(input, vars)?;
+        let selector = Selectors::parse(input, vars)?;
 
         let contents;
         braced!(contents in input);

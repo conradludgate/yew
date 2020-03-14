@@ -1,47 +1,40 @@
+use super::CompoundSelector;
 use super::ParseVariable;
-use super::{MultiSelector, Selector};
-use crate::Peek;
-use boolinator::Boolinator;
-use proc_macro2::Span;
 use quote::{quote, ToTokens};
 use std::collections::HashSet;
-use syn::buffer::Cursor;
 use syn::parse::{ParseStream, Result};
-use syn::{Ident, Token};
+use syn::punctuated::Punctuated;
+use syn::{token::Token, Ident, Token};
 
-pub struct Comma(Selector, Token![,], Box<MultiSelector>);
+pub struct Selectors(Punctuated<CompoundSelector, Token![,]>);
 
-impl Peek<'_, Self> for Comma {
-    fn peek(cursor: Cursor) -> Option<(Self, Cursor)> {
-        let (s1, cursor) = Selector::peek(cursor)?;
-
-        let (punct, cursor) = cursor.punct()?;
-        (punct.as_char() == ',').as_option()?;
-
-        let (s2, cursor) = MultiSelector::peek(cursor)?;
-
-        Some((
-            Comma(s1, Token![,](Span::call_site()), Box::new(s2)),
-            cursor,
-        ))
-    }
-}
-
-impl ParseVariable for Comma {
+impl ParseVariable for Selectors {
     fn parse(input: ParseStream, vars: &mut HashSet<Ident>) -> Result<Self> {
-        let s1 = Selector::parse(input, vars)?;
-        let comma = input.parse::<Token![,]>()?;
-        let s2 = MultiSelector::parse(input, vars)?;
+        let mut punctuated = Punctuated::new();
 
-        Ok(Comma(s1, comma, Box::new(s2)))
+        loop {
+            let value = CompoundSelector::parse(input, vars)?;
+            punctuated.push_value(value);
+            if !<Token![,]>::peek(input.cursor()) {
+                break;
+            }
+            let punct = input.parse()?;
+            punctuated.push_punct(punct);
+        }
+
+        Ok(Selectors(punctuated))
     }
 }
 
-impl ToTokens for Comma {
+impl ToTokens for Selectors {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
-        let Comma(s1, _, s2) = self;
-        let s1 = s1.to_token_stream();
-        let s2 = s2.to_token_stream();
-        tokens.extend(quote! { format!("{},\n{}", #s1, #s2) });
+        let Selectors(selectors) = self;
+        let selectors = selectors.into_iter();
+        tokens.extend(quote! {vec![
+            #(
+                #selectors
+            ),*
+        ]
+        .join(",\n")});
     }
 }

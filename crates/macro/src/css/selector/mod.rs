@@ -9,7 +9,7 @@ use super::ParseVariable;
 use crate::Peek;
 use append::Append;
 use class::Class;
-use comma::Comma;
+pub use comma::Selectors;
 use id::Id;
 use quote::ToTokens;
 use std::collections::HashSet;
@@ -19,46 +19,41 @@ use syn::Ident;
 use tag::Tag;
 use variable::Variable;
 
-pub enum MultiSelector {
-    Comma(Comma),
+pub enum CompoundSelector {
     Append(Append),
     Single(Selector),
 }
 
-impl ParseVariable for MultiSelector {
+impl ParseVariable for CompoundSelector {
     fn parse(input: ParseStream, vars: &mut HashSet<Ident>) -> Result<Self> {
-        let (s, _) = MultiSelector::peek(input.cursor())
+        let (s, _) = CompoundSelector::peek(input.cursor())
             .ok_or(input.error("expected valid selector element"))?;
 
         Ok(match s {
-            MultiSelector::Comma(_) => MultiSelector::Comma(Comma::parse(input, vars)?),
-            MultiSelector::Append(_) => MultiSelector::Append(Append::parse(input, vars)?),
-            MultiSelector::Single(_) => MultiSelector::Single(Selector::parse(input, vars)?),
+            CompoundSelector::Append(_) => CompoundSelector::Append(Append::parse(input, vars)?),
+            CompoundSelector::Single(_) => CompoundSelector::Single(Selector::parse(input, vars)?),
         })
     }
 }
 
-impl Peek<'_, Self> for MultiSelector {
+impl Peek<'_, Self> for CompoundSelector {
     fn peek(cursor: Cursor) -> Option<(Self, Cursor)> {
         // Only peek if a single selector can be found first
         let (s, c) = Selector::peek(cursor)?;
 
-        if let Some((comma, cursor)) = Comma::peek(cursor) {
-            Some((MultiSelector::Comma(comma), cursor))
-        } else if let Some((append, cursor)) = Append::peek(cursor) {
-            Some((MultiSelector::Append(append), cursor))
+        if let Some((append, cursor)) = Append::peek(cursor) {
+            Some((CompoundSelector::Append(append), cursor))
         } else {
-            Some((MultiSelector::Single(s), c))
+            Some((CompoundSelector::Single(s), c))
         }
     }
 }
 
-impl ToTokens for MultiSelector {
+impl ToTokens for CompoundSelector {
     fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
         match self {
-            MultiSelector::Comma(comma) => comma.to_tokens(tokens),
-            MultiSelector::Append(append) => append.to_tokens(tokens),
-            MultiSelector::Single(single) => single.to_tokens(tokens),
+            CompoundSelector::Append(append) => append.to_tokens(tokens),
+            CompoundSelector::Single(single) => single.to_tokens(tokens),
         }
     }
 }

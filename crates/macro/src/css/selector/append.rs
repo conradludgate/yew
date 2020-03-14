@@ -1,5 +1,5 @@
 use super::ParseVariable;
-use super::{MultiSelector, Selector};
+use super::{CompoundSelector, Selector};
 use crate::Peek;
 use boolinator::Boolinator;
 use proc_macro2::Span;
@@ -9,7 +9,7 @@ use syn::buffer::Cursor;
 use syn::parse::{ParseStream, Result};
 use syn::{Ident, Token};
 
-pub struct Append(Selector, Token![&], Box<MultiSelector>);
+pub struct Append(Selector, Token![&], Box<CompoundSelector>);
 
 impl Peek<'_, Self> for Append {
     fn peek(cursor: Cursor) -> Option<(Self, Cursor)> {
@@ -18,7 +18,7 @@ impl Peek<'_, Self> for Append {
         let (punct, cursor) = cursor.punct()?;
         (punct.as_char() == '&').as_option()?;
 
-        let (s2, cursor) = MultiSelector::peek(cursor)?;
+        let (s2, cursor) = CompoundSelector::peek(cursor)?;
 
         Some((
             Append(s1, Token![&](Span::call_site()), Box::new(s2)),
@@ -31,7 +31,7 @@ impl ParseVariable for Append {
     fn parse(input: ParseStream, vars: &mut HashSet<Ident>) -> Result<Self> {
         let s1 = Selector::parse(input, vars)?;
         let amp = input.parse::<Token![&]>()?;
-        let s2 = MultiSelector::parse(input, vars)?;
+        let s2 = CompoundSelector::parse(input, vars)?;
 
         Ok(Append(s1, amp, Box::new(s2)))
     }
