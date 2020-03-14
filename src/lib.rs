@@ -86,12 +86,17 @@ use proc_macro_hack::proc_macro_hack;
 #[proc_macro_hack(support_nested)]
 pub use yew_macro::html;
 
+/// This macro implements CSS parsing and style generations.
+#[proc_macro_hack(support_nested)]
+pub use yew_macro::css;
+
 #[doc(hidden)]
 #[proc_macro_hack(support_nested)]
 pub use yew_macro::html_nested;
 
 /// This module contains macros which implements html! macro and JSX-like templates
 pub mod macros {
+    pub use crate::css;
     pub use crate::html;
     pub use crate::html_nested;
     pub use yew_macro::Properties;

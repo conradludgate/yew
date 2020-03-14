@@ -58,9 +58,11 @@
 #![recursion_limit = "128"]
 extern crate proc_macro;
 
+mod css;
 mod derive_props;
 mod html_tree;
 
+use css::StyleSheet;
 use derive_props::DerivePropsInput;
 use html_tree::{HtmlRoot, HtmlRootNested};
 use proc_macro::TokenStream;
@@ -102,5 +104,11 @@ pub fn html_nested(input: TokenStream) -> TokenStream {
 #[proc_macro_hack]
 pub fn html(input: TokenStream) -> TokenStream {
     let root = parse_macro_input!(input as HtmlRoot);
+    TokenStream::from(quote! {#root})
+}
+
+#[proc_macro_hack]
+pub fn css(input: TokenStream) -> TokenStream {
+    let root = parse_macro_input!(input as StyleSheet);
     TokenStream::from(quote! {#root})
 }
